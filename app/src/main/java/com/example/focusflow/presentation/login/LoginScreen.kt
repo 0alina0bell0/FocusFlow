@@ -46,7 +46,7 @@ import com.example.focusflow.ui.theme.Pink80
 @Preview(showBackground = true)
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
 
     var email by remember { mutableStateOf("") }
@@ -132,7 +132,12 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { /* TODO: добавить обработку входа */ },
+                    onClick = {
+                        viewModel.login(
+                            email,
+                            password
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isEnabled
                 ) {

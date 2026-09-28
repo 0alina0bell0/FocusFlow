@@ -1,5 +1,7 @@
 package com.example.focusflow.domain
 
+import com.example.focusflow.data.UserDto
+
 
 interface AuthRepository {
 
@@ -10,4 +12,8 @@ interface AuthRepository {
     suspend fun logout()
 
     fun isLoggedIn(): Boolean
+
+    suspend fun requestPasswordReset(email: String)
+
+    suspend fun getCurrentUser(): UserDto
 }
