@@ -39,14 +39,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.example.focusflow.navigation.Routes
 import com.example.focusflow.ui.theme.BitterYell
 import com.example.focusflow.ui.theme.MutePink
 import com.example.focusflow.ui.theme.Pink80
 
-@Preview(showBackground = true)
+
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel(),
+    navController: NavController
 ) {
 
     var email by remember { mutableStateOf("") }
@@ -137,6 +140,7 @@ fun LoginScreen(
                             email,
                             password
                         )
+                        navController.navigate(Routes.HOME)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isEnabled
@@ -150,14 +154,18 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { }
+                        onClick = {
+                            navController.navigate(Routes.RESET_PASSWORD)
+                        }
                     ) {
                         Text("Забыли пароль?")
 
                     }
 
                     Button(
-                        onClick = { }
+                        onClick = {
+                            navController.navigate(Routes.REGISTER)
+                        }
                     ) {
                         Text("Регистрация")
                     }

@@ -1,5 +1,6 @@
 package com.example.focusflow.presentation.login
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,17 +27,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.focusflow.ui.theme.MutePink
 import com.example.focusflow.ui.theme.Pink80
 
 @Preview(showBackground = true)
 @Composable
-fun ResetPasswordScreen(){
+fun ResetPasswordScreen(
+    viewModel: ResetPasswordViewModel = hiltViewModel()
+){
 
+    val state = viewModel.state.collectAsStateWithLifecycle().value
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    val isEnabled = email.isNotBlank() && password.isNotBlank()
 
 
     Column(
@@ -75,8 +79,22 @@ fun ResetPasswordScreen(){
 
             Spacer(modifier = Modifier.height(8.dp))
 
-        //сделать проверку, если есть такая почта, то появится строка пароля и кнопка сохранить
-        //если нет такой почты, то появится строка, что такой почты нет
+            if (state.timerSeconds > 0) {
+                Text(
+                    text = "Повторить попытку через ${state.timerSeconds} секунд.",
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    viewModel.resetPassword(email)
+                },
+                enabled = state.timerSeconds == 0
+            ) {
+                Text("Сброс")
+            }
 
         }
     }

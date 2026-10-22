@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val localProperties = Properties().apply {
@@ -66,6 +67,7 @@ kotlin {
 dependencies {
 
     implementation("com.google.dagger:hilt-android:2.57.2")
+    implementation(libs.androidx.compose.runtime)
     ksp("com.google.dagger:hilt-compiler:2.57.2")
     implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.3.0")
 

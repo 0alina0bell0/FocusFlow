@@ -28,12 +28,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.example.focusflow.navigation.Routes
 import com.example.focusflow.ui.theme.MutePink
 import com.example.focusflow.ui.theme.Pink80
+import dagger.hilt.android.lifecycle.HiltViewModel
 
-@Preview(showBackground = true)
+
 @Composable
-fun RegistrationScreen() {
+fun RegistrationScreen(
+    viewModel: RegisterViewModel = hiltViewModel(),
+    navController: NavController
+) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -99,7 +106,10 @@ fun RegistrationScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* TODO: добавить обработку входа */ },
+                onClick = {
+                    viewModel.register(email, password)
+                    navController.navigate(Routes.LOGIN)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isEnabled
             ) {

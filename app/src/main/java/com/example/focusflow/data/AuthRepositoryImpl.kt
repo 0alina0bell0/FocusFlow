@@ -7,11 +7,12 @@ import com.example.focusflow.data.auth.TokenStorage
 import com.example.focusflow.domain.AuthRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.providers.builtin.Email
 import retrofit2.HttpException
 import javax.inject.Inject
+import javax.inject.Singleton
 
 
+@Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
     private val tokenStorage: TokenStorage,
@@ -73,7 +74,10 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun requestPasswordReset(email: String) {
-        client.auth.resetPasswordForEmail(email)
+        client.auth.resetPasswordForEmail(
+            email = email,
+            redirectUrl = "focusflow://reset-password"
+        )
     }
 
     override suspend fun getCurrentUser(): UserDto {
@@ -136,6 +140,18 @@ class AuthRepositoryImpl @Inject constructor(
 
             throw e
         }
+    }
+
+    override suspend fun updatePassword(newPassword: String) {
+
+        checkNotNull(client.auth.currentSessionOrNull())
+
+        client.auth.updateUser {
+            password = newPassword
+        }
+
+        tokenStorage.clear()
+        client.auth.clearSession()
     }
 }
 

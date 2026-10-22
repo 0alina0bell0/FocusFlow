@@ -9,6 +9,7 @@ data class Entity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
+    val completedAt: Long? = null,
     val isCompleted: Boolean = false,
     val reminder: Long? = null,
     // Когда задачу нужно выполнить
