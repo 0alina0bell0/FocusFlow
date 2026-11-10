@@ -25,9 +25,24 @@ import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.example.focusflow.notifications.TaskNotifications
+import android.app.AlarmManager
+import android.net.Uri
+import android.provider.Settings
+import android.util.Log
+import com.example.focusflow.domain.AuthRepository
+import com.example.focusflow.navigation.Routes
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var authRepository: AuthRepository
 
     @Inject
     lateinit var supabaseClient: SupabaseClient
@@ -35,11 +50,37 @@ class MainActivity : ComponentActivity() {
     private val recoveryLinkState =
         MutableStateFlow(RecoveryLinkState.IDLE)
 
+    @Inject
+    lateinit var taskNotifications: TaskNotifications
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (!granted) {
+                Toast.makeText(
+                    this,
+                    "Без разрешения напоминания не будут отображаться",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        taskNotifications.createChannel()
+        requestNotificationPermission()
+        requestExactAlarmAccess()
+
         enableEdgeToEdge()
         handleRecoveryIntent(intent)
+
+        val startRoute = if (authRepository.isLoggedIn()) {
+            Routes.HOME
+        } else {
+            Routes.LOGIN
+        }
 
         setContent {
             val recoveryState by
@@ -49,11 +90,44 @@ class MainActivity : ComponentActivity() {
                 AppNavGraph(
                     recoveryLinkState = recoveryState,
                     onRecoveryNavigationHandled = {
-                        recoveryLinkState.value =
-                            RecoveryLinkState.IDLE
+                        recoveryLinkState.value = RecoveryLinkState.IDLE
+                    },
+                    startRoute = startRoute,
+                    onLogout = {
+                        authRepository.logout()
                     }
                 )
             }
+        }
+    }
+
+    private fun requestExactAlarmAccess() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager =
+                getSystemService(AlarmManager::class.java)
+
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")
+                )
+
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
         }
     }
 
@@ -67,9 +141,13 @@ class MainActivity : ComponentActivity() {
     private fun handleRecoveryIntent(intent: Intent) {
         val uri = intent.data ?: return
 
+        Log.d(
+            "PasswordRecovery",
+            "Получена ссылка: scheme=${uri.scheme}, host=${uri.host}"
+        )
+
         val isRecoveryLink =
-            uri.scheme == "focusflow" &&
-                    uri.host == "reset-password"
+            uri.scheme == "focusflow" && uri.host == "reset-password"
 
         if (!isRecoveryLink) {
             return
@@ -82,6 +160,9 @@ class MainActivity : ComponentActivity() {
             intent = intent,
 
             onSessionSuccess = {
+
+                Log.d("PasswordRecovery", "Сессия восстановления получена")
+
                 lifecycleScope.launch {
                     recoveryLinkState.value =
                         RecoveryLinkState.READY
@@ -89,6 +170,13 @@ class MainActivity : ComponentActivity() {
             },
 
             onError = { error ->
+
+                Log.e(
+                    "PasswordRecovery",
+                    "Не удалось обработать ссылку",
+                    error
+                )
+
                 lifecycleScope.launch {
                     recoveryLinkState.value =
                         RecoveryLinkState.IDLE

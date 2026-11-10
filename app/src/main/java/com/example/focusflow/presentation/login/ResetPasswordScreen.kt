@@ -32,7 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.focusflow.ui.theme.MutePink
 import com.example.focusflow.ui.theme.Pink80
 
-@Preview(showBackground = true)
+
 @Composable
 fun ResetPasswordScreen(
     viewModel: ResetPasswordViewModel = hiltViewModel()

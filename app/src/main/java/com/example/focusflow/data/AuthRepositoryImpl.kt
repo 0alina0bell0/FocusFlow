@@ -20,57 +20,65 @@ class AuthRepositoryImpl @Inject constructor(
 ): AuthRepository {
 
     override suspend fun register(email: String, password: String) {
-        val response = authApi.register(
-            AuthRequest(
-                email = email,
-                password = password
+
+            val response = authApi.register(
+                AuthRequest(
+                    email = email,
+                    password = password
+                )
             )
-        )
 
-        val accessToken = response.accessToken
-        val refreshToken = response.refreshToken
+            val accessToken = response.accessToken
+            val refreshToken = response.refreshToken
 
-        if (
-            accessToken != null &&
-            refreshToken != null
-        ) {
+            if (
+                accessToken != null &&
+                refreshToken != null
+            ) {
+
+                tokenStorage.saveTokens(
+                    accessToken,
+                    refreshToken
+                )
+            }
+
+    }
+
+    override suspend fun login(email: String, password: String) {
+        try {
+            val response = authApi.signIn(
+                request = AuthRequest(
+                    email = email,
+                    password = password
+                )
+            )
+
+            val accessToken =
+                response.accessToken
+                    ?: error("Access token не получен")
+
+            val refreshToken =
+                response.refreshToken
+                    ?: error("Refresh token не получен")
+
 
             tokenStorage.saveTokens(
                 accessToken,
                 refreshToken
             )
+        } catch (e: Exception) {
+            throw e
         }
-    }
-
-    override suspend fun login(email: String, password: String) {
-        val response = authApi.signIn(
-            request = AuthRequest(
-                email = email,
-                password = password
-            )
-        )
-
-        val accessToken =
-            response.accessToken
-                ?: error("Access token не получен")
-
-        val refreshToken =
-            response.refreshToken
-                ?: error("Refresh token не получен")
-
-
-        tokenStorage.saveTokens(
-            accessToken,
-            refreshToken
-        )
     }
 
     override suspend fun logout() {
         tokenStorage.clear()
+        client.auth.clearSession()
     }
 
     override fun isLoggedIn(): Boolean {
-        return client.auth.currentSessionOrNull() != null
+        return !tokenStorage.getAccessToken().isNullOrBlank() &&
+                !tokenStorage.getRefreshToken().isNullOrBlank()
     }
 
     override suspend fun requestPasswordReset(email: String) {

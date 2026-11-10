@@ -17,6 +17,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
+
     @Singleton
     @Provides
     fun providerOkHttpClient(): OkHttpClient =
@@ -38,7 +42,7 @@ object NetworkModule {
             )
             .client(okHttpClient)
             .addConverterFactory(
-                Json.asConverterFactory(
+                json.asConverterFactory(
                     "application/json".toMediaType()
                 )
             )

@@ -2,6 +2,7 @@ package com.example.focusflow.presentation.MainListScreen
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,12 +39,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.focusflow.data.Entity
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,7 +59,6 @@ fun CreateItemScreen(
 ){
 
     var title by rememberSaveable { mutableStateOf("") }
-    val isSaveEnabled = title.isNotBlank()
 
     val context = LocalContext.current
     val zoneId = ZoneId.systemDefault()
@@ -66,6 +69,58 @@ fun CreateItemScreen(
     var selectedMinute by rememberSaveable {mutableIntStateOf(-1) }
 
     val selectedDate = selectedEpochDay?.let { LocalDate.ofEpochDay(it) }
+
+    val reminderMillis: Long? =
+        if (
+            selectedDate != null &&
+            selectedHour in 0..23 &&
+            selectedMinute in 0..59
+        ) {
+            LocalDateTime.of(
+                selectedDate,
+                LocalTime.of(selectedHour, selectedMinute)
+            )
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        } else {
+            null
+        }
+
+    var nowMillis by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1_000L.milliseconds)
+        }
+    }
+
+    val isFutureTime = reminderMillis?.let {
+        it > nowMillis
+    } ?: false
+
+    val isSaveEnabled = title.isNotBlank() && isFutureTime
+
+
+    LaunchedEffect(selectedEpochDay, selectedHour, selectedMinute) {
+        val pastDate = selectedDate?.isBefore(
+            LocalDate.now(zoneId)
+        ) == true
+
+        val pastDateTime = reminderMillis?.let {
+            it <= System.currentTimeMillis()
+        } == true
+
+        if (pastDate || pastDateTime) {
+            Toast.makeText(
+                context,
+                "Выберите будущую дату и время",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     val dateFormatter = DateTimeFormatter.ofPattern(
         "dd MMMM yyyy",
         Locale.getDefault()
@@ -251,30 +306,27 @@ fun CreateItemScreen(
 
             Button(
                 onClick = {
-                    val date = requireNotNull(selectedDate)
+                    val time = reminderMillis
 
-                    val reminderDateTime = LocalDateTime.of(
-                        date,
-                        LocalTime.of(
-                            selectedHour,
-                            selectedMinute
+                    if (time == null || time <= System.currentTimeMillis()) {
+                        nowMillis = System.currentTimeMillis()
+
+                        Toast.makeText(
+                            context,
+                            "Выберите будущую дату и время",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        val newTask = Entity(
+                            title = title.trim(),
+                            isCompleted = false,
+                            reminder = time,
+                            dueAt = null,
+                            priority = priority
                         )
-                    )
 
-                    val reminderMillis = reminderDateTime
-                        .atZone(zoneId)
-                        .toInstant()
-                        .toEpochMilli()
-
-                    val newTask = Entity(
-                        title = title.trim(),
-                        isCompleted = false,
-                        reminder = reminderMillis,
-                        dueAt = null,
-                        priority = priority
-                    )
-
-                    onSaveClick(newTask)
+                        onSaveClick(newTask)
+                    }
                 },
                 enabled = isSaveEnabled,
                 modifier = Modifier.fillMaxWidth()
